@@ -31,7 +31,7 @@ pub enum ContentType {
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
 pub struct Payload {
     pub content_type: ContentType,
-    pub content: String,
+    pub content: String, //two choices here either I change this payload to have the filtering metadata or change the point itself I am favoring changing this
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -47,6 +47,11 @@ pub struct Point {
     pub vector: Option<DenseVector>,
     pub payload: Option<Payload>,
 }
+
+// An Enum having the operations we can do with the attributes which we can filter i.e. grt(>) grteq(>=) eq(==) in(this attribute exists for the results) etc.
+// An Enum of conditions AND OR NOT maybe XOR
+// Maybe even an enum for the order in which we return the results(as an option field)
+// I would need a Fiter Struct which will give a structure to the filtering requests and make them kinda modular i.e. a parameter, a value, operation enum, a possible condition like AND OR, a link to another condition possibly in a tree form to enable nesting or we could simply use a predefined heiarchy which simplifies structure but limits the choices
 
 /// Struct which will be stored in the vector index
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -86,7 +91,7 @@ pub struct SearchQueryInput {
     pub similarity: Similarity,
     pub limit: usize,
     #[serde(default)]
-    pub ef: Option<usize>,
+    pub ef: Option<usize>, // adding 2 terms in this Struct, filter and method of filteration
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
