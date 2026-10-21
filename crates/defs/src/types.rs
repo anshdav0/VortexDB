@@ -48,10 +48,34 @@ pub struct Point {
     pub payload: Option<Payload>,
 }
 
-// An Enum having the operations we can do with the attributes which we can filter i.e. grt(>) grteq(>=) eq(==) in(this attribute exists for the results) etc.
-// An Enum of conditions AND OR NOT maybe XOR
-// Maybe even an enum for the order in which we return the results(as an option field)
-// I would need a Fiter Struct which will give a structure to the filtering requests and make them kinda modular i.e. a parameter, a value, operation enum, a possible condition like AND OR, a link to another condition possibly in a tree form to enable nesting or we could simply use a predefined heiarchy which simplifies structure but limits the choices
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum FilterOp {
+    Eq,
+    Neq,
+    Lt,
+    Leq,
+    Gt,
+    Gteq,
+    In,
+    Exists,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FieldCondition {
+    pub key: String,
+    pub op: FilterOp,
+    #[serde(default)]
+    pub value: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Filter {
+    Condition(FieldCondition),
+    And(Vec<Filter>),
+    Or(Vec<Filter>),
+    Not(Box<Filter>),
+    Xor(Vec<Filter>),
+}
 
 /// Struct which will be stored in the vector index
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
