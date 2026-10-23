@@ -31,7 +31,9 @@ pub enum ContentType {
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
 pub struct Payload {
     pub content_type: ContentType,
-    pub content: String, //two choices here either I change this payload to have the filtering metadata or change the point itself I am favoring changing this
+    pub content: String,
+    #[serde(default)]
+    pub metadata: Option<serde_json::Value>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -58,6 +60,7 @@ pub enum FilterOp {
     Gteq,
     In,
     Exists,
+    NotExists,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -66,6 +69,13 @@ pub struct FieldCondition {
     pub op: FilterOp,
     #[serde(default)]
     pub value: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum FilterMode {
+    #[default]
+    Post,
+    Inline,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -116,6 +126,10 @@ pub struct SearchQueryInput {
     pub limit: usize,
     #[serde(default)]
     pub ef: Option<usize>, // adding 2 terms in this Struct, filter and method of filteration
+    #[serde(default)]
+    pub filter: Option<Filter>,
+    #[serde(default)]
+    pub filter_mode: FilterMode,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -167,6 +181,32 @@ impl<'q> Eq for DistanceOrderedVector<'q> {}
 //     Context(ContextQuery<VectorInternal>),
 // }
 
+impl Filter {
+    pub fn matches(&self, metadata: &serde_json::Value) -> bool {
+        match self {
+            Filter::Condition(c) => c.matches(metadata),
+            Filter::And(fs) => fs.iter().all(|f| f.matches(metadata)),
+            Filter::Or(fs) => fs.iter().any(|f| f.matches(metadata)),
+            Filter::Not(f) => !f.matches(metadata),
+            Filter::Xor(fs) => fs.iter().filter(|f| f.matches(metadata)).count() % 2 == 1,
+        }
+    }
+}
+
+impl FieldCondition {
+    fn matches(&self, metadata: &serde_json::Value) -> bool {
+        let found = resolve_path(metadata, &self.key);
+        match self.op {
+            FilterOp::Exists => found.is_some(),
+            FilterOp::NotExists => found.is_none(),
+            _ => match (found, self.value.as_ref()) {
+                (Some(lhs), Some(rhs)) => compare_op(&self.op, lhs, rhs),
+                _ => false,
+            },
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Default)]
 pub struct OrdF32(pub f32);
 
@@ -196,5 +236,46 @@ impl PartialOrd for OrdF32 {
 impl From<f32> for OrdF32 {
     fn from(x: f32) -> Self {
         Self(x)
+    }
+}
+
+fn resolve_path<'a>(doc: &'a serde_json::Value, key: &str) -> Option<&'a serde_json::Value> {
+    key.split('.').try_fold(doc, |cur, seg| cur.get(seg))
+}
+
+fn value_eq(a: &serde_json::Value, b: &serde_json::Value) -> bool {
+    match (a, b) {
+        (serde_json::Value::Number(x), serde_json::Value::Number(y)) => {
+            matches!((x.as_f64(), y.as_f64()), (Some(x), Some(y)) if x == y)
+        }
+        _ => a == b,
+    }
+}
+
+fn ordered_cmp(a: &serde_json::Value, b: &serde_json::Value) -> Option<Ordering> {
+    match (a, b) {
+        (serde_json::Value::Number(x), serde_json::Value::Number(y)) => {
+            x.as_f64()?.partial_cmp(&y.as_f64()?)
+        }
+        (serde_json::Value::String(x), serde_json::Value::String(y)) => Some(x.cmp(y)),
+        (serde_json::Value::Bool(x), serde_json::Value::Bool(y)) => Some(x.cmp(y)),
+        _ => None,
+    }
+}
+
+fn compare_op(op: &FilterOp, a: &serde_json::Value, b: &serde_json::Value) -> bool {
+    match op {
+        FilterOp::Eq => value_eq(a, b),
+        FilterOp::Neq => !value_eq(a, b),
+        FilterOp::Lt | FilterOp::Leq | FilterOp::Gt | FilterOp::Gteq => match ordered_cmp(a, b) {
+            Some(Ordering::Less) => matches!(op, FilterOp::Lt | FilterOp::Leq),
+            Some(Ordering::Equal) => matches!(op, FilterOp::Lt | FilterOp::Gteq),
+            Some(Ordering::Greater) => matches!(op, FilterOp::Gt | FilterOp::Gteq),
+            None => false,
+        },
+        FilterOp::In => {
+            matches!(b, serde_json::Value::Array(xs) if xs.iter().any(|i| value_eq(i, a)))
+        }
+        FilterOp::Exists | FilterOp::NotExists => true,
     }
 }
