@@ -146,6 +146,8 @@ impl VectorDb {
         let vectors =
             index.search_with_ef(query.vector, query.similarity, query.limit, query.ef)?;
 
+        let vectors = self.filter_ids(vectors, query.filter.as_ref())?;
+        //pass the Uuid vector to filtering function made which returns the actual vector which should be returned
         Ok(vectors)
     }
 
@@ -156,6 +158,7 @@ impl VectorDb {
         for query in queries {
             let found =
                 index.search_with_ef(query.vector, query.similarity, query.limit, query.ef)?;
+            let found = self.filter_ids(found, query.filter.as_ref())?;
             results.push(found);
         }
 
@@ -190,6 +193,31 @@ impl VectorDb {
         }
 
         Ok(inserted)
+    }
+
+    fn payload_matches(&self, id: PointId, filter: &Filter) -> Result<bool> {
+        Ok(self
+            .storage
+            .get_payload(id)?
+            .and_then(|p| p.metadata)
+            .is_some_and(|m| filter.matches(&m)))
+    }
+
+    fn filter_ids(
+        &self,
+        ids: impl IntoIterator<Item = PointId>,
+        filter: Option<&Filter>,
+    ) -> Result<Vec<PointId>> {
+        let Some(f) = filter else {
+            return Ok(ids.into_iter().collect());
+        };
+        let mut out = Vec::new();
+        for id in ids {
+            if self.payload_matches(id, f)? {
+                out.push(id);
+            }
+        }
+        Ok(out)
     }
 }
 
