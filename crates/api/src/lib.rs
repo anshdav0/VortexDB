@@ -198,21 +198,20 @@ impl VectorDb {
         Ok(self
             .storage
             .get_payload(id)?
-            .and_then(|p| p.metadata)
-            .is_some_and(|m| filter.matches(&m)))
+            .is_some_and(|p| filter.matches(&p.metadata)))
     }
 
     fn filter_ids(
         &self,
-        ids: impl IntoIterator<Item = PointId>,
+        ids: impl IntoIterator<Item = (PointId, f32)>,
         filter: Option<&Filter>,
-    ) -> Result<Vec<PointId>> {
+    ) -> Result<Vec<(PointId, f32)>> {
         let Some(f) = filter else {
             return Ok(ids.into_iter().collect());
         };
         let mut out = Vec::new();
         for id in ids {
-            if self.payload_matches(id, f)? {
+            if self.payload_matches(id.0, f)? {
                 out.push(id);
             }
         }
