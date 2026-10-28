@@ -11,6 +11,8 @@ pub type ElementByte = u8;
 
 pub type Dimension = usize;
 
+pub type Metadata = serde_json::Map<String, serde_json::Value>;
+
 // Dense Vector and Vector are considered same
 // Sparse vector implementation not supported yet. Refer lib/sparse/src/common/sparse_vector.rs
 pub type DenseVector = Vec<Element>;
@@ -33,7 +35,7 @@ pub struct Payload {
     pub content_type: ContentType,
     pub content: String,
     #[serde(default)]
-    pub metadata: Option<serde_json::Value>,
+    pub metadata: Metadata,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -183,7 +185,7 @@ impl<'q> Eq for DistanceOrderedVector<'q> {}
 // }
 
 impl Filter {
-    pub fn matches(&self, metadata: &serde_json::Value) -> bool {
+    pub fn matches(&self, metadata: &Metadata) -> bool {
         match self {
             Filter::Condition(c) => c.matches(metadata),
             Filter::And(fs) => fs.iter().all(|f| f.matches(metadata)),
@@ -195,7 +197,7 @@ impl Filter {
 }
 
 impl FieldCondition {
-    fn matches(&self, metadata: &serde_json::Value) -> bool {
+    fn matches(&self, metadata: &Metadata) -> bool {
         let found = resolve_path(metadata, &self.key);
         match self.op {
             FilterOp::Exists => found.is_some(),
@@ -240,8 +242,14 @@ impl From<f32> for OrdF32 {
     }
 }
 
-fn resolve_path<'a>(doc: &'a serde_json::Value, key: &str) -> Option<&'a serde_json::Value> {
-    key.split('.').try_fold(doc, |cur, seg| cur.get(seg))
+fn resolve_path<'a>(metadata: &'a Metadata, key: &str) -> Option<&'a serde_json::Value> {
+    let mut segments = key.split('.');
+    let first = segments.next()?;
+    let mut cur = metadata.get(first)?;
+    for seg in segments {
+        cur = cur.get(seg)?;
+    }
+    Some(cur)
 }
 
 fn value_eq(a: &serde_json::Value, b: &serde_json::Value) -> bool {
