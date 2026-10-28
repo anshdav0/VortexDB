@@ -1,7 +1,10 @@
-use defs::{DbError, Dimension, IndexedVector, SearchQueryInput, Similarity, SnapshottableDb};
+use defs::{
+    DbError, Dimension, FilterMode, IndexedVector, SearchQueryInput, Similarity, SnapshottableDb,
+};
 use defs::{DenseVector, Payload, Point, PointId, PointInput};
 use index::hnsw::{HnswConfig, HnswIndex};
 use index::kd_tree::{KDTree, KDTreeConfig};
+use std::iter::FilterMap;
 use std::path::{Path, PathBuf};
 use tempfile::tempdir;
 // use std::sync::atomic::{AtomicU64, Ordering};
@@ -145,8 +148,9 @@ impl VectorDb {
         let vectors =
             index.search_with_ef(query.vector, query.similarity, query.limit, query.ef)?;
 
-        let vectors = self.filter_ids(vectors, query.filter.as_ref())?;
-        //pass the Uuid vector to filtering function made which returns the actual vector which should be returned
+        if query.filter_mode == FilterMode::Post {
+            let vectors = self.filter_ids(vectors, query.filter.as_ref())?;
+        }
         Ok(vectors)
     }
 
@@ -157,7 +161,9 @@ impl VectorDb {
         for query in queries {
             let found =
                 index.search_with_ef(query.vector, query.similarity, query.limit, query.ef)?;
-            let found = self.filter_ids(found, query.filter.as_ref())?;
+            if query.filter_mode == FilterMode::Post {
+                let found = self.filter_ids(found, query.filter.as_ref())?;
+            }
             results.push(found);
         }
 
