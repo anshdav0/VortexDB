@@ -53,6 +53,8 @@ version = "0.1.0"
 dependencies = [
  "defs",
  "index",
+ "serde",
+ "serde_json",
  "snafu",
  "snapshot",
  "storage",
