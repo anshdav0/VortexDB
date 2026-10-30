@@ -145,11 +145,11 @@ impl VectorDb {
         // Use vector index to find similar vectors
         let index = self.index.read().map_err(|_| ApiError::LockError)?;
 
-        let vectors =
+        let mut vectors =
             index.search_with_ef(query.vector, query.similarity, query.limit, query.ef)?;
 
         if query.filter_mode == FilterMode::Post {
-            let vectors = self.filter_ids(vectors, query.filter.as_ref())?;
+            vectors = self.filter_ids(vectors, query.filter.as_ref())?;
         }
         Ok(vectors)
     }
@@ -159,10 +159,10 @@ impl VectorDb {
         let index = self.index.read().unwrap();
 
         for query in queries {
-            let found =
+            let mut found =
                 index.search_with_ef(query.vector, query.similarity, query.limit, query.ef)?;
             if query.filter_mode == FilterMode::Post {
-                let found = self.filter_ids(found, query.filter.as_ref())?;
+                found = self.filter_ids(found, query.filter.as_ref())?;
             }
             results.push(found);
         }

@@ -278,7 +278,7 @@ fn compare_op(op: &FilterOp, a: &serde_json::Value, b: &serde_json::Value) -> bo
         FilterOp::Neq => !value_eq(a, b),
         FilterOp::Lt | FilterOp::Leq | FilterOp::Gt | FilterOp::Gteq => match ordered_cmp(a, b) {
             Some(Ordering::Less) => matches!(op, FilterOp::Lt | FilterOp::Leq),
-            Some(Ordering::Equal) => matches!(op, FilterOp::Lt | FilterOp::Gteq),
+            Some(Ordering::Equal) => matches!(op, FilterOp::Leq | FilterOp::Gteq),
             Some(Ordering::Greater) => matches!(op, FilterOp::Gt | FilterOp::Gteq),
             None => false,
         },
