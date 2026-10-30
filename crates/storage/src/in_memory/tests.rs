@@ -18,7 +18,7 @@ fn test_payload(content: &str, metadata: Metadata) -> Payload {
     }
 }
 
-pub fn meta(v: serde_json::Value) -> Metadata {
+fn meta(v: serde_json::Value) -> Metadata {
     v.as_object().unwrap().clone()
 }
 

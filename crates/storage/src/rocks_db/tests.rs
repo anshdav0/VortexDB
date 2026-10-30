@@ -1,6 +1,7 @@
 use super::*;
 
 use defs::ContentType;
+use serde_json::{Value, json};
 use uuid::Uuid;
 
 use tempfile::{TempDir, tempdir};
@@ -10,6 +11,10 @@ fn create_test_db() -> (RocksDbStorage, TempDir) {
 
     let db = RocksDbStorage::new(temp_dir.path()).expect("Failed to create RocksDB");
     (db, temp_dir)
+}
+
+fn meta(v: serde_json::Value) -> Metadata {
+    v.as_object().unwrap().clone()
 }
 
 #[test]
@@ -41,7 +46,7 @@ fn test_insert_and_get_payload() {
     let payload = Some(Payload {
         content_type: ContentType::Text,
         content: "Test".to_string(),
-        metadata: meta(json! {"age": 12}),
+        metadata: meta(json!({"age": 12})),
     });
     let vector = None;
 
