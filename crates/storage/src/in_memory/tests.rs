@@ -1,7 +1,7 @@
 use super::*;
 
 use defs::{ContentType, Metadata};
-use serde_json::Value;
+use serde_json::{Value, json};
 use std::io::{Read, Write};
 use tempfile::{TempDir, tempdir};
 use uuid::Uuid;
