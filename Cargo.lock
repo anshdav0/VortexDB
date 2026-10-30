@@ -2452,6 +2452,7 @@ dependencies = [
  "flate2",
  "rocksdb",
  "serde",
+ "serde_json",
  "snafu",
  "tar",
  "tempfile",

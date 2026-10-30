@@ -26,6 +26,7 @@ fn test_insert_and_get_vector() {
     let payload = Some(Payload {
         content_type: ContentType::Text,
         content: "Test".to_string(),
+        metadata: meta(json!({"age": 12})),
     });
 
     assert!(db.insert_point(id, vector.clone(), payload).is_ok());
@@ -40,6 +41,7 @@ fn test_insert_and_get_payload() {
     let payload = Some(Payload {
         content_type: ContentType::Text,
         content: "Test".to_string(),
+        metadata: meta(json! {"age": 12}),
     });
     let vector = None;
 
@@ -49,6 +51,7 @@ fn test_insert_and_get_payload() {
     let expected = Some(Payload {
         content_type: ContentType::Text,
         content: "Test".to_string(),
+        metadata: meta(json!({"age": 12})),
     });
     assert_eq!(result, expected);
 }
@@ -60,6 +63,7 @@ fn test_contains_point() {
     let payload = Some(Payload {
         content_type: ContentType::Text,
         content: "Test".to_string(),
+        metadata: meta(json!({"age": 12})),
     });
 
     assert!(!db.contains_point(id).unwrap());
@@ -77,6 +81,7 @@ fn test_delete_point() {
     let payload = Some(Payload {
         content_type: ContentType::Text,
         content: "Test".to_string(),
+        metadata: meta(json!({"age": 12})),
     });
 
     let vector = vec![0.7, 0.8, 0.9];
@@ -138,6 +143,7 @@ fn test_create_and_load_checkpoint() {
     let payload = Some(Payload {
         content_type: ContentType::Text,
         content: "Test".to_string(),
+        metadata: meta(json!({"age": 12})),
     });
 
     assert!(
